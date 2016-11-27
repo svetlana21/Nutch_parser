@@ -1,0 +1,12 @@
+
+Recno:: 0
+URL:: http://karabakh.bravepages.com/az/01-2.htm
+
+ParseText::
+Karabakh - Earth and people...
+
+Recno:: 2
+URL:: http://tezadlar.narod.ru/2/cemiy.htm
+
+ParseText::
+Heyd?r ?liyev Gulhan?y? niy?
