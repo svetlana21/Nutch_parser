@@ -122,4 +122,5 @@ if __name__ == '__main__':
     my_parser.langid(text)
     my_parser.sent_norm()
     my_parser.counts()
-    my_parser.symbols_s()
+    tokens = my_parser.symbols_s()
+    my_parser.write(tokens)
