@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import pprint as pp
 import re
 import langid
-import string
 from nltk.tokenize import sent_tokenize
 
 class NutchParser():
@@ -28,47 +26,59 @@ class NutchParser():
     
     def langid(self, text):
         '''
-        Разбиение на предложения и удаление английских и русских предложений
+        Разбиение на предложения и удаление вкраплений иностранных языков.
+        Турецкий язык не учитывается, т.к. langid часто путает его с азербайджанским.
         '''
         self.tokens = sent_tokenize(text)        # разбиение на предложения
         non_az_tokens = []
         for token in self.tokens:
             lang = langid.classify(token)       # определение языка токена
-            if lang[0] == 'en' or lang[0] == 'ru':
-                non_az_tokens.append([token, lang[0]])      # запись русских и английских токенов в отдельный список
-        for token in non_az_tokens:     # удаление русских и английских токенов из списка всех токенов
+            if lang[0] != 'az' and lang[0] != 'tr':
+                non_az_tokens.append([token, lang[0]])      # запись неазербайджанских токенов в отдельный список 
+        for token in non_az_tokens:     # удаление неазербайджанских токенов из списка всех токенов
             self.tokens.remove(token[0])
             
     def sent_norm(self):
         '''
         Нормализация предложений.
         1. Замена некоторых данных на спецсимволы:
-            1) даты -> D;
+            1) даты -> DATE;
             2) время -> TIME;
-            3) числа -> N;
-            4) ссылки -> LINK;
-            5) телефоны -> TEL;
-            6) адреса эл. почты -> EMAIL.
+            3) ссылки -> LINK;
+            4) телефоны -> TEL;
+            5) адреса эл. почты -> EMAIL;
+            6) числа, записанные арабскими или римскими цифры -> N.
         2. Удаление информации следующей за знаком копирайта.
-        3. Удаление лишних пробельных символов и пунктуации.
-        4. Удаление токенов, содержащих > 3 обозначений чисел N подряд (т.к. скорее всего это нумерация страниц) и токенов из одного слова.
+        3. Удаление лишних небуквенных символов.
+        4. Удаление дефисов на месте тире с сохранением дефисных написаний слов.
+        5. Удаление лишних пробельных символов.
+        6. Удаление токенов, содержащих > 3 обозначений чисел N подряд (т.к. скорее всего это нумерация страниц) и токенов из одного слова.
         '''
         for i in range(0, len(self.tokens)):
             token = self.tokens.pop(i)      # извлекаем по одному токену из списка
-            token = re.sub('\d{4}-\d{2}-\d{2}|\d{2}[-.]\d{2}[-.]\d{4}|\d{2}\.\d{2}\.\d{2}', 'D', token)   # даты -> D
-            token = re.sub('\d{2} (yanvar|fevral|mart|aprel|may|iyun|iyul|avqust|sentyabr|oktyabr|noyabr|dekabr) \d{4}', 'D', token)
+            token = re.sub('\d{4}-\d{2}-\d{2}|\d{2}[-.]\d{2}[-.]\d{4}|\d{2}\.\d{2}\.\d{2}', 'DATE', token)   # даты -> DATE
+            token = re.sub('\d{2} (yanvar|fevral|mart|aprel|may|iyun|iyul|avqust|sentyabr|oktyabr|noyabr|dekabr) \d{4}', 'DATE', token)
             token = re.sub('\d{2}:\d{2}', 'TIME', token)        # время -> TIME
             token = re.sub('www\.\S+|http:\S+', 'LINK', token)  # ссылки -> LINK
-            token = re.sub('\(?\+99\d? ?\(?\d{2,3}\)? ?\d{2,3}[ -]?\d{2,3}[ -]?\d{2,3}[ -]?', 'TEL', token)     # телефоны -> TEL
+            token = re.sub('\(?\+99\d? ?\(?\d{2,3}\)? ?\d{2,3}[ -]?\d{2,3}[ -]?\d{2,3}', 'TEL', token)     # телефоны -> TEL
             token = re.sub('[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', 'EMAIL', token)       # адреса эл. почты -> EMAIL
             token = re.sub('\d+', 'N', token)   # числа -> N
             copy = token.find('©')              # Удаление информации следующей за знаком копирайта
             if copy != -1:
                 token = token.replace(token[copy:], '')
-            token = token.encode('utf-8')       # Удаление лишних пробельных символов и пунктуации
-            punct_replacer = bytes.maketrans(string.punctuation.encode('utf-8'), ' '.encode('utf-8')*len(string.punctuation)) 
-            token = token.translate(punct_replacer).decode('utf-8')
-            token = ' '.join(token.split()).strip()
+            token = re.sub('[^AaBbCcÇçDdEeƏəFfGgĞğHhXxIıİiJjKkQqLlMmNnOoÖöPpRrSsŞşTtUuÜüVvYyZz\- ]', '', token)   # Удаление небуквенных символов         
+            hyphen1 = token.find(' -')      # удаление дефисов на месте тире с сохранением дефисных написаний слов
+            hyphen2 = token.find('- ')
+            if hyphen1 != -1:
+                token = token.replace(' -', ' ')
+            if hyphen2 != -1:
+                token = token.replace('- ', ' ')    
+            split_token = token.split()     
+            for ind in range(0, len(split_token)):
+                word = split_token.pop(ind)
+                word = re.sub('^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$', 'N', word)     # числа, записанные римскими цифрами -> N
+                split_token.insert(ind, word)            
+            token = ' '.join(split_token).strip()     # Удаление лишних пробельных символов
             self.tokens.insert(i, token)        # помещаем токен в список на прежнее место
         aux_list = []
         for token in self.tokens:
