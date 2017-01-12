@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from parser_for_nutch import NutchParser
+from parser_for_nutch_v2 import NutchParser
 
 class TestNutchParser(unittest.TestCase):
 
@@ -10,9 +10,8 @@ class TestNutchParser(unittest.TestCase):
 
     def test_delete_signs(self):
         test_data = 'test.txt'
-        true_result = 'Karabakh - Earth and people...\nHeyd?r ?liyev Gulhan?y? niy?'
+        true_result = 'Karabakh - Earth and people...\nLakin bu gün Azərbaycanın və Ermənistanın prezidentlərinin Əliyevin və Köçəryanın birbaşa görüşlərindən 1994 ildən daha əla nəticələri əldə etmək olar.'
         fact_result = self.test_nutch_parser.delete_signs(test_data)
-        #print(fact_result)
         self.assertEqual(true_result, fact_result)
         
     def test_langid(self):
@@ -27,13 +26,15 @@ class TestNutchParser(unittest.TestCase):
         self.assertEqual(true_result, fact_result)
         
     def test_sent_norm(self):
-        self.test_nutch_parser.tokens = ['  www.fd.az word 22.11.1999  ', ' http://abiturient.az/600anket/ 23 45,  \nword 12-11-2014, 15:00',
-                                         '\n date 23.11.2014 tel +99412 344 00 00 12 yanvar 2016', '45 345 345 66', 'word © word',
-                                         'date 1999-11-11 e-mail derslik@tqdk.gov.az']
-        true_result = ['LINK word D', 'LINK N N word D TIME', 'date D tel TEL D', 'date D e mail EMAIL']
+        self.test_nutch_parser.tokens = ['Mən Jo Prezelın sözləri ilə razıyam beynəlxalq ticarət embarqo başlanması haqda.', 
+                                         '  www.fd.az slovo 22.11.1999  ', ' http://abiturient.az/600anket/ 23 45,  \nslovo 12-11-2014, 15:00',
+                                         '\n date 23.11.2014 tel +99412 344 00 00 12 yanvar 2016', '45 345 345 66', 'slovo © slovo',
+                                         'date- 1999-11-11 -e-mail - derslik@tqdk.gov.az', 'XCIV Digits MCML II',
+                                         '• qanunvericiliklə qadağan']
+        true_result = ['Mən Jo Prezelın sözləri ilə razıyam beynəlxalq ticarət embarqo başlanması haqda', 'LINK slovo DATE', 
+                       'LINK N N slovo DATE TIME', 'date DATE tel TEL DATE', 'date DATE e-mail EMAIL', 'N Digits N N', 'qanunvericiliklə qadağan']
         self.test_nutch_parser.sent_norm()
         fact_result = self.test_nutch_parser.tokens
-        print(fact_result)
         self.assertEqual(true_result, fact_result)
         
     def test_counts(self):
