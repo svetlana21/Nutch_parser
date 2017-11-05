@@ -53,6 +53,7 @@ class NutchParser():
         4. Удаление дефисов на месте тире с сохранением дефисных написаний слов.
         5. Удаление лишних пробельных символов.
         6. Удаление токенов, содержащих > 3 обозначений чисел N подряд (т.к. скорее всего это нумерация страниц) и токенов из одного слова.
+        7. Удаление символа комбинируемой надстрочной точки (в unicode – U+0307).
         '''
         for i in range(0, len(self.tokens)):
             token = self.tokens.pop(i)      # извлекаем по одному токену из списка
@@ -87,6 +88,12 @@ class NutchParser():
                 aux_list.append(token)          # если токен содержит посл-ть N N N N или ни одного пробела, добавляем во вспомогательный список
         for tok in aux_list:
             self.tokens.remove(tok)             # удаляем из основного списка всё, что оказалось во вспомогательном
+        clear_tokens = []
+        for token in self.tokens:  # удаление символа U+0307, часто встречающегося в словах
+            if '̇' in token:
+                token = token.replace('̇', '')
+            clear_tokens.append(token)
+        self.tokens = clear_tokens.copy()
 
     def counts(self):
         '''
@@ -122,5 +129,6 @@ if __name__ == '__main__':
     my_parser.langid(text)
     my_parser.sent_norm()
     my_parser.counts()
+    # tokens = my_parser.tokens
     tokens = my_parser.symbols_s()
     my_parser.write(tokens)
